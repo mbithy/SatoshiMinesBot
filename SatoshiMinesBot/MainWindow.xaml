@@ -1,12 +1,135 @@
-﻿<Window x:Class="SatoshiMinesBot.MainWindow"
+﻿<controls:MetroWindow x:Name="metroWindow"  x:Class="SatoshiMinesBot.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:SatoshiMinesBot"
+        xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+                       xmlns:dataModel="clr-namespace:SatoshiMinesBot.Api"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="525">
-    <Grid>
-        
-    </Grid>
-</Window>
+        xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"               
+        Title="Satoshi Mines Bot" Width="850" TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal" 
+        TextOptions.TextRenderingMode="Auto"        
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{StaticResource MaterialDesignFont}" MouseDown="Window_MouseDown" MinWidth="800" Height="500">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Button.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.Shadows.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.ToggleButton.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.PopupBox.xaml" />
+                <!-- throw in some extra colour for out floating action button -->
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignColors;component/Themes/MaterialDesignColor.Green.Named.Primary.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesignTheme.TextBox.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style TargetType="{x:Type TextBox}" BasedOn="{StaticResource MaterialDesignTextBox}">
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="Margin" Value="8 8 0 8" />
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <materialDesign:DialogHost Identifier="AppRootDialog">
+        <Grid x:Name="grid" Margin="0,0,0,-0.333">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="9*"/>
+                <ColumnDefinition Width="4*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="78*"/>
+                <RowDefinition Height="89*"/>
+                <RowDefinition Height="182*"/>
+                <RowDefinition Height="55*"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Height="42" Width="446" Margin="52,18,51.333,18">
+                <TextBlock FontSize="14" TextWrapping="Wrap" Margin="0,25,0,0"><Run  Text="Game"/></TextBlock>
+                <RadioButton x:Name="OneMine" Margin="30,25,0,0" IsChecked="True">
+                    <Run  Text="1 Mine"/>
+                </RadioButton>
+                <RadioButton x:Name="ThreeMines" Margin="30,25,0,0">
+                    <Run  Text="3 Mines"/>
+                </RadioButton>
+                <RadioButton x:Name="FiveMines" Margin="30,25,0,0">
+                    <Run  Text="5 Mines"/>
+                </RadioButton>
+                <RadioButton x:Name="TwentyFourMines" Margin="30,25,0,0">
+                    <Run  Text="24 Mines"/>
+                </RadioButton>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Height="52" Width="526" Margin="12,19,11.333,17.667">
+                <TextBox x:Name="PlayerHash" materialDesign:HintAssist.Hint="Hash"  Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0 8 0 8" Width="300" ToolTip="Your hash. Can be found in url"/>
+                <TextBox x:Name="BetAmount" materialDesign:HintAssist.Hint="Bet(Bits)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8,8,0,8" Width="75" ToolTip="Amount to wager"/>
+                <TextBox x:Name="NumberOfGuesses" materialDesign:HintAssist.Hint="Guesses" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8,8,0,8" Width="50" ToolTip="Number of tiles to pic per game"/>
+                <TextBox x:Name="Multiplier" materialDesign:HintAssist.Hint="x(Bet)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8 8 0 8" Width="50" ToolTip="Multiplier on Loss"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Height="100" Width="600" Margin="-34,40.333,227.333,41" Grid.ColumnSpan="2">
+                <lvc:Gauge x:Name="BalanceGauge" FromColor="MediumPurple" ToColor="GhostWhite" Uses360Mode="False" Title="Balance(BTC)" From="0" To="1" Width="200" Height="100" />
+                <lvc:Gauge x:Name="ProfitGauge" FromColor="MediumPurple" ToColor="GhostWhite"  Uses360Mode="False" Title="Profit (BTC)" From="-1" To="1" Width="200" Height="100" />
+                <lvc:Gauge x:Name="Growth"  FromColor="MediumPurple" ToColor="GhostWhite" Uses360Mode="False" Title="% Growth" From="-100" To="100" Width="200" Height="100" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Height="50" Width="136" Margin="207,0,206.333,0">
+                <Button x:Name="Begin" Margin="0 8 0 10" Content="Start" HorizontalAlignment="Left" VerticalAlignment="Center" Click="Begin_Click" />
+                <Button x:Name="Stop" IsEnabled="False" Margin="8 8 0 10" Content="Stop" HorizontalAlignment="Left" VerticalAlignment="Center" Click="Stop_OnClick" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Grid.RowSpan="4" Height="{Binding Height, ElementName=grid}" Margin="0.667,0,0.333,-0.333">
+                <TextBlock FontSize="14" TextWrapping="Wrap" Margin="0,5,0,0" HorizontalAlignment="Center"><Run  Text="Previous Games"/></TextBlock>
+                <ScrollViewer>
+                    <ListBox x:Name="PreviousGames" Background="{x:Null}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type dataModel:CashOutData}">
+                                <materialDesign:Card Height="85">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="60" />
+                                            <ColumnDefinition Width="165" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Background="{DynamicResource PrimaryHueLightBrush}" TextBlock.Foreground="{DynamicResource PrimaryHueLightForegroundBrush}" CornerRadius="2 0 0 2" Padding="8">
+                                            <TextBlock Text="{Binding mines}" />
+                                        </Border>
+                                        <StackPanel Margin="8,8,8,8" Grid.Column="1" HorizontalAlignment="Right">
+                                            <TextBlock Text="Mbithy sBot" FontWeight="Bold" />
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock FontWeight="Bold" Text="Game Id: " />
+                                                <TextBlock Text="{Binding game_id}" />
+                                            </StackPanel>
+                                            <!--<StackPanel Orientation="Horizontal">
+                                            <TextBlock FontWeight="Bold" Text="String: " />
+                                            <TextBlock Text="{Binding random_string}" />
+                                        </StackPanel>-->
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock FontWeight="Bold" Text="% Win: " />
+                                                <TextBlock Text="{Binding wins}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <Button Style="{StaticResource MaterialDesignFloatingActionMiniAccentButton}" Grid.Column="1" Margin="-20 0 0 0" HorizontalAlignment="Left">
+                                            <Viewbox Width="24" Height="24">
+                                                <Canvas Width="24" Height="24">
+                                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0" Text="{Binding outcome}" />
+                                                </Canvas>
+                                            </Viewbox>
+                                        </Button>
+                                    </Grid>
+                                </materialDesign:Card>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ListBox>
+                </ScrollViewer>
+                
+            </StackPanel>
+
+        </Grid>
+    </materialDesign:DialogHost>
+
+</controls:MetroWindow>
