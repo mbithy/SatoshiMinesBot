@@ -32,7 +32,7 @@ namespace SatoshiMinesBot
         private decimal _baseBet,_currentBet;
         private double _originalBalance,_currentBalance, _profit, _growth,_maxGuesses,_game,_multiplier,_currentGuesses,_wins,_losses;
         private string _playerHash,_title,_message;
-        private bool _gameIsStop,_isError,_wasLoss;
+        private bool _gameIsStop,_isError,_wasLoss,_isPractice;
         private string _bdval,_lastSent,_lastResponse;
         private HttpWebRequest _httpRequest;
         private GameData _gameData;
@@ -42,6 +42,7 @@ namespace SatoshiMinesBot
         readonly DispatcherTimer _dispatcherTimer= new DispatcherTimer();
         private List<int>_pickedNumbers= new List<int>();
         BetData _bd;
+        Random _random= new Random();
 
         private static int[] PickTile(int length = 1)
         {
@@ -64,7 +65,7 @@ namespace SatoshiMinesBot
 
         private int NextTile()
         {
-            return PickTile(13)[6];
+            return PickTile(13)[_random.Next(0,12)];
         }
 
         public MainWindow()
@@ -150,11 +151,21 @@ namespace SatoshiMinesBot
         {
             Stop.IsEnabled = true;
             Begin.IsEnabled = false;
+            _currentBalance = _originalBalance = 0;
             _baseBet=_currentBet = decimal.Parse(BetAmount.Text.Trim());
             _gameIsStop = false;
             _growth = 0;
             _profit = 0;
             _currentBalance = _originalBalance = (GetBalance().balance*ConvertMultiplier);
+            if (_currentBalance == 0)
+            {
+                _isPractice = true;
+                _originalBalance = _currentBalance = 10000;
+            }
+            else
+            {
+                _isPractice = false;
+            }
             NewGame();
             _dispatcherTimer.Start();
         }
@@ -372,8 +383,11 @@ namespace SatoshiMinesBot
                     _wasLoss = true;
                     _losses++;
                     _currentGuesses = 0;
-                    //_currentBalance -= double.Parse((_currentBet / (decimal)ConvertMultiplier).ToString("0.000000", new CultureInfo("en-US")));
-                    //_profit -= double.Parse((_currentBet/(decimal)ConvertMultiplier).ToString("0.000000", new CultureInfo("en-US")));
+                    if (_isPractice)
+                    {
+                        _currentBalance -= double.Parse((_currentBet).ToString("0.000000", new CultureInfo("en-US")));
+                        _profit -= double.Parse((_currentBet/(decimal) ConvertMultiplier).ToString("0.000000", new CultureInfo("en-US")));
+                    }
                     if (!_gameIsStop)
                     {
                         _currentBet = _currentBet*(decimal)_multiplier;
@@ -412,9 +426,12 @@ namespace SatoshiMinesBot
                     {
                         _currentBet = _baseBet;
                         _wasLoss = false;
-                        //var stk = _bd.stake*ConvertMultiplier;
-                        //_currentBalance += (stk-(double)_currentBet)/ConvertMultiplier;// double.Parse(_currentBet.ToString("0.000000", new CultureInfo("en-US")));
-                        //_profit += (stk - (double)_currentBet)/ConvertMultiplier;//  double.Parse(_currentBet.ToString("0.000000", new CultureInfo("en-US")));
+                        if (_isPractice)
+                        {
+                            var stk = _bd.stake * ConvertMultiplier;
+                            _currentBalance += (stk - (double)_currentBet);// double.Parse(_currentBet.ToString("0.000000", new CultureInfo("en-US")));
+                            _profit += (stk - (double)_currentBet) / ConvertMultiplier;//  double.Parse(_currentBet.ToString("0.000000", new CultureInfo("en-US")));
+                        }
                         _wins++;
                         _pickedNumbers.Clear();
                         PrepareRequest("https://satoshimines.com/action/cashout.php");
@@ -486,8 +503,11 @@ namespace SatoshiMinesBot
                         PreviousGames.Items.RemoveAt(0);
                     }
                 });
-                _currentBalance = GetBalance().balance*ConvertMultiplier;
-                _profit = (_currentBalance - _originalBalance)/ConvertMultiplier;
+                if (!_isPractice)
+                {
+                    _currentBalance = GetBalance().balance*ConvertMultiplier;
+                    _profit = (_currentBalance - _originalBalance)/ConvertMultiplier;
+                }
                 NewGame();
             }
             catch (Exception ex)
