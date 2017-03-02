@@ -10,5 +10,6 @@
         public string game_id { get; set; }
         public string outcome { get; set; }
         public string wins{ get; set; }
+        public string gameLink { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Runtime.Serialization.Json;
@@ -83,17 +84,19 @@ namespace SatoshiMinesBot.Api
             }
         }
 
-        public void TryWithdraw(string btcAddr, int ammountSatoshi)
+        public string TryWithdraw(string btcAddr, double amountBits)
         {
             try
             {
+                var am = amountBits/1000000;
                 PrepRequest("https://satoshimines.com/action/full_cashout.php");
-                var withdrawResponce =Encoding.UTF8.GetBytes($"secret={PlayerHash}&payto_address={btcAddr}&amount={(ammountSatoshi/1000000).ToString("0.000000", new CultureInfo("en-US"))}");
-                GetPostResponce(withdrawResponce);
+                var withdrawResponce =Encoding.UTF8.GetBytes($"secret={PlayerHash}&payto_address={btcAddr}&amount={am.ToString("0.000000", new CultureInfo("en-US"))}");
+                var wth = Encoding.UTF8.GetString(withdrawResponce);
+                return GetPostResponce(withdrawResponce);
             }
-            catch
+            catch(Exception ex)
             {
-
+                return ex.Message;
             }
         }
 

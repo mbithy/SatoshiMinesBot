@@ -1,8 +1,5 @@
-﻿
-
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -14,6 +11,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using MaterialDesignThemes.Wpf;
+using sminesdb.Entities;
+using sminesdb.Entities.Principal;
 using SatoshiMinesBot.Api;
 
 namespace SatoshiMinesBot
@@ -29,20 +28,34 @@ namespace SatoshiMinesBot
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25
         };
 
-        private decimal _baseBet,_currentBet;
-        private double _originalBalance,_currentBalance, _profit, _growth,_maxGuesses,_game,_multiplier,_currentGuesses,_wins,_losses;
-        private string _playerHash,_title,_message;
-        private bool _gameIsStop,_isError,_wasLoss,_isPractice;
+        private decimal _baseBet;
+        private decimal _currentBet,_beforePreroll;
+        private decimal _maxBet;
+        private double _originalBalance;
+        private double _currentBalance;
+        private double _profit,_profitThreshhold,_profitWithdrawn;
+        private double _maxGuesses;
+        private double _game;
+        private double _multiplier;
+        private double _currentGuesses;
+        private double _wins;
+        private double _losses,_elapsedTime;
+        private string _playerHash,_title,_message,_withdrawAddress;
+        private bool _gameIsStop;
+        private bool _isError;
+        private bool _isPreroll;
+        private bool _isPractice;
         private string _bdval,_lastSent,_lastResponse;
         private HttpWebRequest _httpRequest;
         private GameData _gameData;
-        const float ConvertMultiplier = 1000000;
+        private const float ConvertMultiplier = 1000000;
         private readonly Regex _rBdVal = new Regex("var bdval = '(\\d+)'");
-        //private int _previousPick;
-        readonly DispatcherTimer _dispatcherTimer= new DispatcherTimer();
-        private List<int>_pickedNumbers= new List<int>();
-        BetData _bd;
-        Random _random= new Random();
+        private readonly DispatcherTimer _dispatcherTimer= new DispatcherTimer();
+        private readonly List<int>_pickedNumbers= new List<int>();
+        private BetData _bd;
+        private readonly Random _random= new Random();
+        private readonly gameDataContext _gameDataContext= new gameDataContext();
+        private SatoshiMinesAPI _satoshiMinesAPI;
 
         private static int[] PickTile(int length = 1)
         {
@@ -71,20 +84,24 @@ namespace SatoshiMinesBot
         public MainWindow()
         {
             InitializeComponent();
-            Growth.LabelFormatter = x => x.ToString("##.##") + "%";
-            BalanceGauge.LabelFormatter = ProfitGauge.LabelFormatter = x => "uB" + x.ToString("0.0", new CultureInfo("en-US"));
+            AmountWithdrawn.LabelFormatter = BalanceGauge.LabelFormatter = ProfitGauge.LabelFormatter = x => "uB" + x.ToString("0.0", new CultureInfo("en-US"));
             _dispatcherTimer.Interval=TimeSpan.FromSeconds(1);
             _dispatcherTimer.Tick += _dispatcherTimer_Tick;
-            //PreviousGames.ItemsSource = _cashOut;
-            PlayerHash.Text = "Your hash";
+
+            PlayerHash.Text = "Your player hash";
             BetAmount.Text = "30";
             NumberOfGuesses.Text = "1";
             Multiplier.Text = "25.3";
+            MaxBetAmount.Text = "19500";
+            WithdrawAddress.Text = "Your withdrawal address";
+            WithdrawAmount.Text = "5000";
         }
 
         private void _dispatcherTimer_Tick(object sender, EventArgs e)
         {
-            UpdateGauges();
+            _elapsedTime += 1;
+            var x = _wins + _losses;
+            ElapsedTime.Text = "GP: " + x + " Time: " + State(_elapsedTime);
         }
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
@@ -99,10 +116,12 @@ namespace SatoshiMinesBot
             StopGame();
         }
 
+        #region Begin
         private void Begin_Click(object sender, RoutedEventArgs e)
         {
             _playerHash = PlayerHash.Text.Trim();
             Getbdval();
+            _satoshiMinesAPI= new SatoshiMinesAPI(_playerHash);
         }
         private void Getbdval()
         {
@@ -146,21 +165,24 @@ namespace SatoshiMinesBot
                 }
             }
         }
+#endregion
 
+        #region Game Settings
         private void StartGame()
         {
+            _isError = false;
             Stop.IsEnabled = true;
             Begin.IsEnabled = false;
             _currentBalance = _originalBalance = 0;
             _baseBet=_currentBet = decimal.Parse(BetAmount.Text.Trim());
             _gameIsStop = false;
-            _growth = 0;
             _profit = 0;
-            _currentBalance = _originalBalance = (GetBalance().balance*ConvertMultiplier);
+            _profitWithdrawn = 0;
+            _currentBalance = _originalBalance = GetBalance().balance*ConvertMultiplier;
             if (_currentBalance == 0)
             {
                 _isPractice = true;
-                _originalBalance = _currentBalance = 10000;
+                _originalBalance = _currentBalance = 25000;
             }
             else
             {
@@ -168,6 +190,7 @@ namespace SatoshiMinesBot
             }
             NewGame();
             _dispatcherTimer.Start();
+            _elapsedTime = 0;
         }
 
         private void BasicSettings()
@@ -177,63 +200,51 @@ namespace SatoshiMinesBot
                 _baseBet = decimal.Parse(BetAmount.Text.Trim());
                 _multiplier = double.Parse(Multiplier.Text);
                 _maxGuesses = double.Parse(NumberOfGuesses.Text);
+                _maxBet = decimal.Parse(MaxBetAmount.Text.Trim());
+                _profitThreshhold = double.Parse(WithdrawAmount.Text.Trim());
+                _withdrawAddress = WithdrawAddress.Text.Trim();
                 _game = Game();
             });
             
         }
-        private void NewGame()
-        {
-            //UpdateGauges();
-            BasicSettings();
-            _currentGuesses = 0;
-            PrepareRequest("https://satoshimines.com/action/newgame.php");
-            var bet = _currentBet / (decimal)ConvertMultiplier;
-            var newGameresponce = Bcodes("player_hash={0}&bet={1}&num_mines={2}" + _bdval, _playerHash, bet.ToString("0.000000", new CultureInfo("en-US")), _game);
-
-            if (!_gameIsStop)
-            {
-                GetPostResponse(newGameresponce, EndNewGameResponce);
-            }
-            else
-            {
-                //ShowMessage("Betting Stoped", "The game was ended.");
-            }
-        }
-
         private void UpdateGauges()
         {
-            BalanceGauge.Value = _currentBalance;
-            while (BalanceGauge.To <= BalanceGauge.Value)
+            Dispatcher.Invoke(() =>
             {
-                BalanceGauge.To *= 2;
-            }
-            ProfitGauge.Value = _profit * ConvertMultiplier;// _convertMultiplier;
-            while (ProfitGauge.To <= ProfitGauge.Value)
-            {
-                ProfitGauge.To *= 2;
-            }
-            
-            if (_originalBalance == 0)
-            {
-                _originalBalance = 1;
-            }
-            if (_currentBalance > 0)
-            {
-                Growth.Value = ((_currentBalance - _originalBalance)/_originalBalance)*100;
-                while (Growth.To<=Growth.Value)
+                BalanceGauge.Value = _currentBalance;
+                while (BalanceGauge.To <= BalanceGauge.Value)
                 {
-                    Growth.To *= 2;
+                    BalanceGauge.To *= 2;
                 }
-            }
+                ProfitGauge.Value = _profit * ConvertMultiplier;
+                ProfitGauge.Value += _profitWithdrawn;
+                while (ProfitGauge.To <= ProfitGauge.Value)
+                {
+                    ProfitGauge.To *= 2;
+                }
 
-            if (_isError ||_gameIsStop)
-            {
-                ShowMessage(_title,_message);
-                Stop.IsEnabled = false;
-                Begin.IsEnabled = true;
-                _dispatcherTimer.Stop();
-            }
+                if (_originalBalance == 0)
+                {
+                    _originalBalance = 1;
+                }
 
+                if (_profitWithdrawn > 0)
+                {
+                    AmountWithdrawn.Value = _profitWithdrawn;
+                    while (AmountWithdrawn.To <= AmountWithdrawn.Value)
+                    {
+                        AmountWithdrawn.To *= 2;
+                    }
+                }
+
+                if (_isError || _gameIsStop)
+                {
+                    ShowMessage(_title, _message);
+                    Stop.IsEnabled = false;
+                    Begin.IsEnabled = true;
+                    _dispatcherTimer.Stop();
+                }
+            });
         }
 
         private double Game()
@@ -242,7 +253,7 @@ namespace SatoshiMinesBot
             {
                 return 1;
             }
-            else if(ThreeMines.IsChecked.Value)
+            else if (ThreeMines.IsChecked.Value)
             {
                 return 3;
             }
@@ -266,15 +277,38 @@ namespace SatoshiMinesBot
             _isError = true;
             _title = "Betting Stopped";
             _message = "The game was ended";
-            //_dispatcherTimer.Stop();
+            _dispatcherTimer.Stop();
         }
+
+        #endregion
+
+        private void NewGame()
+        {
+            UpdateGauges();
+            BasicSettings();
+            _currentGuesses = 0;
+            PrepareRequest("https://satoshimines.com/action/newgame.php");
+            var bet = _currentBet / (decimal)ConvertMultiplier;
+            var newGameresponce = Bcodes("player_hash={0}&bet={1}&num_mines={2}" + _bdval, _playerHash, bet.ToString("0.000000", new CultureInfo("en-US")), _game);
+
+            if (!_gameIsStop)
+            {
+                GetPostResponse(newGameresponce, EndNewGameResponce);
+            }
+            else
+            {
+                StopGame();
+            }
+        }
+
 
         private static async void ShowMessage(string title,string msg)
         {
-            var message = new SatoshiMinesBot.MessageDialog(title,msg);
+            var message = new MessageDialog(title,msg);
             await DialogHost.Show(message, "AppRootDialog");
         }
 
+        #region Game Prep
         private void PrepareRequest(string url)
         {
             _httpRequest = (HttpWebRequest)WebRequest.Create(url);
@@ -327,6 +361,7 @@ namespace SatoshiMinesBot
                 return (T)s.ReadObject(ms);
             }
         }
+        #endregion
 
         private void EndNewGameResponce(IAsyncResult ar)
         {
@@ -362,6 +397,8 @@ namespace SatoshiMinesBot
             }
         }
 
+        #region Game Response
+
         private void EndBetResponce(IAsyncResult asyncResult)
         {
             try
@@ -380,91 +417,139 @@ namespace SatoshiMinesBot
 
                 if (_bd.outcome == "bomb")
                 {
-                    _wasLoss = true;
-                    _losses++;
-                    _currentGuesses = 0;
-                    if (_isPractice)
-                    {
-                        _currentBalance -= double.Parse((_currentBet).ToString("0.000000", new CultureInfo("en-US")));
-                        _profit -= double.Parse((_currentBet/(decimal) ConvertMultiplier).ToString("0.000000", new CultureInfo("en-US")));
-                    }
-                    if (!_gameIsStop)
-                    {
-                        _currentBet = _currentBet*(decimal)_multiplier;
-                        if (_currentBet <= decimal.Parse(bal.balance.ToString("0.000000", new CultureInfo("en-US"))) || bal.balance == 0)
-                        {
-                            NewGame();
-                        }
-                        else
-                        {
-                            _gameIsStop = true;
-                            _isError = true;
-                            _title = "Betting Stopped";
-                            _message = "The current bet is bigger than balance";
-                            //ShowMessage("Betting Stoped", "The current bet is bigger than balance");
-                        }
-                    }
-                    else
-                    {
-                        //ShowMessage("Betting Stoped", "The game was ended.");
-                        _gameIsStop = true;
-                        _isError = true;
-                        _title = "Betting Stopped";
-                        _message = "The game was ended";
-                    }
+                    OnLoss(bal);
                 }
                 else
                 {
-
-                    var betSquare = NextTile();
-                    while (IsPicked(betSquare))
-                    {
-                        betSquare = NextTile();
-                    }
-                    _pickedNumbers.Add(betSquare);
-                    if (_currentGuesses >= _maxGuesses)
-                    {
-                        _currentBet = _baseBet;
-                        _wasLoss = false;
-                        if (_isPractice)
-                        {
-                            var stk = _bd.stake * ConvertMultiplier;
-                            _currentBalance += (stk - (double)_currentBet);// double.Parse(_currentBet.ToString("0.000000", new CultureInfo("en-US")));
-                            _profit += (stk - (double)_currentBet) / ConvertMultiplier;//  double.Parse(_currentBet.ToString("0.000000", new CultureInfo("en-US")));
-                        }
-                        _wins++;
-                        _pickedNumbers.Clear();
-                        PrepareRequest("https://satoshimines.com/action/cashout.php");
-                        var cashoutResponce = Bcodes("game_hash={0}", _gameData.game_hash);
-                        GetPostResponse(cashoutResponce, EndCashoutResponce);
-                    }
-                    else
-                    {
-                        _currentGuesses++;
-                        PrepareRequest("https://satoshimines.com/action/checkboard.php");
-                        var betResponce = Bcodes("game_hash={0}&guess={1}&v04=1" + _bdval, _gameData.game_hash, betSquare);
-                        GetPostResponse(betResponce, EndBetResponce);
-                    }
-
+                    OnWin();
                 }
-
             }
             catch (Exception ex)
             {
                 _gameIsStop = true;
-                //ShowMessage("Failled to place bet", ex.Message);
                 _isError = true;
                 _title = "Failled to place bet";
                 _message = ex.Message;
                 StopGame();
-                //PrepareRequest("https://satoshimines.com/action/checkboard.php");
-                //int betSquare = NextTile();
-                //byte[] betResponce = Bcodes("game_hash={0}&guess={1}&v04=1", _gameData.game_hash, betSquare);
-                //GetPostResponse(betResponce, EndBetResponce);
             }
         }
 
-        bool IsPicked(int b)
+        private void OnWin()
+        {
+            var betSquare = NextTile();
+            while (IsPicked(betSquare))
+            {
+                betSquare = NextTile();
+            }
+            _pickedNumbers.Add(betSquare);
+            if (_currentGuesses >= _maxGuesses)
+            {
+                if (!_isPreroll && _currentBet > 0)
+                {
+                    _currentBet = _baseBet;
+                    NextGameOnWin();
+                }
+                else if (_isPreroll && _currentBet == 0)
+                {
+                    _currentBet = _beforePreroll;
+                    _isPreroll = false;
+                    NextGameOnWin();
+                }
+            }
+            else
+            {
+                _currentGuesses++;
+                PrepareRequest("https://satoshimines.com/action/checkboard.php");
+                var betResponce = Bcodes("game_hash={0}&guess={1}&v04=1" + _bdval, _gameData.game_hash, betSquare);
+                GetPostResponse(betResponce, EndBetResponce);
+            }
+        }
+
+        private void OnLoss(BalanceData bal)
+        {
+            _losses++;
+            _currentGuesses = 0;
+            _isPreroll = true;
+            var lss = new CashOutData
+            {
+                game_id = _gameData.id.ToString(),
+                outcome = "LOSS",
+                win = 0,
+                wins = ((_wins/(_wins + _losses))*100).ToString("##.##"),
+            };
+            foreach (var pickedNumber in _pickedNumbers)
+            {
+                lss.mines += pickedNumber;
+            }
+            _pickedNumbers.Clear();
+            AddToView(lss);
+
+            if (_isPractice)
+            {
+                _currentBalance -= double.Parse((_currentBet).ToString("0.000000", new CultureInfo("en-US")));
+                _profit -= double.Parse((_currentBet/(decimal) ConvertMultiplier).ToString("0.000000", new CultureInfo("en-US")));
+            }
+
+            if (!_gameIsStop)
+            {
+                if (_currentBet > 0)
+                {
+                    _currentBet = _currentBet*(decimal) _multiplier;
+                    _beforePreroll = _currentBet;
+                }
+
+                if (_currentBet > 0)
+                {
+                    _currentBet = 0;
+                    NewGame();
+                }
+                else
+                {
+                    if (_currentBet <= (decimal) bal.balance || bal.balance == 0)
+                    {
+                        if (_currentBet > _maxBet)
+                        {
+                            _currentBet = _baseBet;
+                        }
+                        NewGame();
+                    }
+                    else
+                    {
+                        _gameIsStop = true;
+                        _isError = true;
+                        _title = "Betting Stopped";
+                        _message = "The current bet is bigger than balance";
+                    }
+                }
+            }
+            else
+            {
+                _gameIsStop = true;
+                _isError = true;
+                _title = "Betting Stopped";
+                _message = "The game was ended";
+            }
+        }
+
+        #endregion
+
+        private void NextGameOnWin()
+        {
+            if (_isPractice)
+            {
+                var stk = _bd.stake*ConvertMultiplier;
+                _currentBalance += (stk - (double) _currentBet); // double.Parse(_currentBet.ToString("0.000000", new CultureInfo("en-US")));
+                _profit += (stk - (double) _currentBet)/ConvertMultiplier; //  double.Parse(_currentBet.ToString("0.000000", new CultureInfo("en-US")));
+            }
+            _wins++;
+            _pickedNumbers.Clear();
+            PrepareRequest("https://satoshimines.com/action/cashout.php");
+            var cashoutResponce = Bcodes("game_hash={0}", _gameData.game_hash);
+            GetPostResponse(cashoutResponce, EndCashoutResponce);
+        }
+
+
+        private bool IsPicked(int b)
         {
             foreach (var pickedNumber in _pickedNumbers)
             {
@@ -475,6 +560,8 @@ namespace SatoshiMinesBot
             }
             return false;
         }
+
+        #region Cash Out
 
         private void EndCashoutResponce(IAsyncResult asyncResult)
         {
@@ -492,22 +579,28 @@ namespace SatoshiMinesBot
                 {
                     throw new Exception();
                 }
-                //cd.game_link = $"https://satoshimines.com/s/{cd.game_id}/{cd.random_string}/";
+                cd.gameLink = $"https://satoshimines.com/s/{cd.game_id}/{cd.random_string}/";
                 cd.wins = ((_wins/(_wins + _losses))*100).ToString("##.##");
-                cd.outcome = !_wasLoss ? "WIN" : "LOSS";
-                Dispatcher.Invoke(() =>
-                {
-                    PreviousGames.Items.Add(cd);
-                    if (PreviousGames.Items.Count > 5)
-                    {
-                        PreviousGames.Items.RemoveAt(0);
-                    }
-                });
+                cd.outcome = "WIN";
+
+                AddToView(cd);
+
                 if (!_isPractice)
                 {
                     _currentBalance = GetBalance().balance*ConvertMultiplier;
                     _profit = (_currentBalance - _originalBalance)/ConvertMultiplier;
                 }
+
+                if ((_profit*ConvertMultiplier) >= _profitThreshhold)
+                {
+                    var withdrawResponse = _satoshiMinesAPI.TryWithdraw(_withdrawAddress, _profitThreshhold);
+                    if (withdrawResponse.Contains("success"))
+                    {
+                        _profitWithdrawn += _profitThreshhold;
+                        _profit = 0;
+                    }
+                }
+
                 NewGame();
             }
             catch (Exception ex)
@@ -520,7 +613,52 @@ namespace SatoshiMinesBot
             }
         }
 
-       
+        private void AddToView(CashOutData cd)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                PreviousGames.Items.Add(cd);
+                if (PreviousGames.Items.Count > 5)
+                {
+                    PreviousGames.Items.RemoveAt(0);
+                }
+                var dbCashOut = new Cashout
+                {
+                    GameId = cd.game_id,
+                    GameLink = cd.gameLink,
+                    Id = _gameDataContext.Cashout.NextId(),
+                    LastUpdate = DateTime.Now.ToFileTime(),
+                    Mines = cd.mines,
+                    RandomString = cd.random_string,
+                    Win = (long)cd.win,
+                    BalanceAfter = (GetBalance().balance * ConvertMultiplier).ToString("0.0", new CultureInfo("en-US"))
+                };
+                _gameDataContext.Cashout.Insert(dbCashOut);
+            });
+        }
+
+        #endregion
+
+        private String State(double point)
+        {
+            var state = TimeSpan.FromSeconds(point);
+            if (state.Days > 0)
+            {
+                return state.Days.ToString("00") + ":" + state.Hours.ToString("00") + ":" + state.Minutes.ToString("00") + ":" + state.Seconds.ToString("00");
+            }
+            else if (state.Hours > 0)
+            {
+                return state.Hours.ToString("00") + ":" + state.Minutes.ToString("00") + ":" + state.Seconds.ToString("00");
+            }
+            else if (state.Minutes > 0)
+            {
+                return state.Minutes.ToString("00") + ":" + state.Seconds.ToString("00");
+            }
+            else
+            {
+                return state.Seconds.ToString("00");
+            }
+        }
 
         private BalanceData GetBalance()
         {

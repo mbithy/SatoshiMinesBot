@@ -34,19 +34,19 @@
     </Window.Resources>
 
     <materialDesign:DialogHost Identifier="AppRootDialog">
-        <Grid x:Name="grid" Margin="0,0,0,-0.333">
+        <Grid x:Name="Grid" Margin="0,0,0,-0.333">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="9*"/>
                 <ColumnDefinition Width="4*"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="78*"/>
-                <RowDefinition Height="89*"/>
-                <RowDefinition Height="182*"/>
-                <RowDefinition Height="55*"/>
+                <RowDefinition Height="66*"/>
+                <RowDefinition Height="176*"/>
+                <RowDefinition Height="165*"/>
+                <RowDefinition Height="64*"/>
             </Grid.RowDefinitions>
 
-            <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Height="42" Width="446" Margin="52,18,51.333,18">
+            <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Height="42" Width="446" Margin="69,12">
                 <TextBlock FontSize="14" TextWrapping="Wrap" Margin="0,25,0,0"><Run  Text="Game"/></TextBlock>
                 <RadioButton x:Name="OneMine" Margin="30,25,0,0" IsChecked="True">
                     <Run  Text="1 Mine"/>
@@ -62,24 +62,35 @@
                 </RadioButton>
             </StackPanel>
 
-            <StackPanel Orientation="Horizontal" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Height="52" Width="526" Margin="12,19,11.333,17.667">
-                <TextBox x:Name="PlayerHash" materialDesign:HintAssist.Hint="Hash"  Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0 8 0 8" Width="300" ToolTip="Your hash. Can be found in url"/>
-                <TextBox x:Name="BetAmount" materialDesign:HintAssist.Hint="Bet(Bits)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8,8,0,8" Width="75" ToolTip="Amount to wager"/>
-                <TextBox x:Name="NumberOfGuesses" materialDesign:HintAssist.Hint="Guesses" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8,8,0,8" Width="50" ToolTip="Number of tiles to pic per game"/>
-                <TextBox x:Name="Multiplier" materialDesign:HintAssist.Hint="x(Bet)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8 8 0 8" Width="50" ToolTip="Multiplier on Loss"/>
+            <StackPanel Orientation="Vertical" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="101,12,100,8" Height="156" Width="383">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                    <TextBox x:Name="PlayerHash" materialDesign:HintAssist.Hint="Hash"  Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0 8 0 8" Width="300" ToolTip="Your hash. Can be found in url"/>
+                    <TextBox x:Name="BetAmount" materialDesign:HintAssist.Hint="Bet(Bits)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8,8,0,8" Width="75" ToolTip="Amount to wager"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                    <TextBox x:Name="MaxBetAmount" materialDesign:HintAssist.Hint="Max Bet(Bits)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0,8" Width="125" ToolTip="Amount to wager"/>
+                    <TextBox x:Name="NumberOfGuesses" materialDesign:HintAssist.Hint="Guesses" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8,8,0,8" Width="75" ToolTip="Number of tiles to pic per game"/>
+                    <TextBox x:Name="Multiplier" materialDesign:HintAssist.Hint="Multiplier" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8 8 0 8" Width="125" ToolTip="Multiplier on Loss"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
+                    <TextBox x:Name="WithdrawAddress" materialDesign:HintAssist.Hint="Address"  Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="0 8 0 8" Width="300" ToolTip="Your hash. Can be found in url"/>
+                    <TextBox x:Name="WithdrawAmount" materialDesign:HintAssist.Hint="Withdraw(Bits)" Style="{StaticResource MaterialDesignFloatingHintTextBox}" Margin="8,8,0,8" Width="75" ToolTip="Amount to wager"/>
+                </StackPanel>
             </StackPanel>
 
-            <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Height="100" Width="600" Margin="-34,40.333,227.333,41" Grid.ColumnSpan="2">
-                <lvc:Gauge x:Name="BalanceGauge" FromColor="MediumPurple" ToColor="GhostWhite" Uses360Mode="False" Title="Balance(BTC)" From="0" To="1" Width="200" Height="100" />
-                <lvc:Gauge x:Name="ProfitGauge" FromColor="MediumPurple" ToColor="GhostWhite"  Uses360Mode="False" Title="Profit (BTC)" From="-1" To="1" Width="200" Height="100" />
-                <lvc:Gauge x:Name="Growth"  FromColor="MediumPurple" ToColor="GhostWhite" Uses360Mode="False" Title="% Growth" From="-100" To="100" Width="200" Height="100" />
+            <StackPanel Orientation="Horizontal" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" Height="100" Width="600" Margin="-9,33,252.333,31.667" Grid.ColumnSpan="2">
+                <lvc:Gauge x:Name="BalanceGauge" FromColor="MediumPurple" ToColor="GhostWhite" Uses360Mode="False" Title="Balance(bits)" From="0" To="1" Width="200" Height="100" />
+                <lvc:Gauge x:Name="ProfitGauge" FromColor="MediumPurple" ToColor="GhostWhite"  Uses360Mode="False" Title="Profit (bits)" From="-1" To="1" Width="200" Height="100" />
+                <lvc:Gauge x:Name="AmountWithdrawn"  FromColor="MediumPurple" ToColor="GhostWhite" Uses360Mode="False" Title="Sent (bits)" From="-1" To="1" Width="200" Height="100" />
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Height="50" Width="136" Margin="207,0,206.333,0">
+            <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Height="50" Width="136" Margin="224,0.333,224,0">
                 <Button x:Name="Begin" Margin="0 8 0 10" Content="Start" HorizontalAlignment="Left" VerticalAlignment="Center" Click="Begin_Click" />
                 <Button x:Name="Stop" IsEnabled="False" Margin="8 8 0 10" Content="Stop" HorizontalAlignment="Left" VerticalAlignment="Center" Click="Stop_OnClick" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Grid.RowSpan="4" Height="{Binding Height, ElementName=grid}" Margin="0.667,0,0.333,-0.333">
-                <TextBlock FontSize="14" TextWrapping="Wrap" Margin="0,5,0,0" HorizontalAlignment="Center"><Run  Text="Previous Games"/></TextBlock>
+            <StackPanel Grid.Column="1" Grid.RowSpan="4" Height="{Binding Height, ElementName=Grid}" Margin="1,0,0.333,-0.333">
+                <TextBlock x:Name="ElapsedTime" FontSize="14" TextWrapping="Wrap" Margin="0,5,0,0" HorizontalAlignment="Center"><Run  Text="Previous Games"/></TextBlock>
                 <ScrollViewer>
                     <ListBox x:Name="PreviousGames" Background="{x:Null}">
                         <ItemsControl.ItemTemplate>
@@ -126,7 +137,7 @@
                         </ItemsControl.ItemsPanel>
                     </ListBox>
                 </ScrollViewer>
-                
+
             </StackPanel>
 
         </Grid>

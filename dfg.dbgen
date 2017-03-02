@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ProjectDefinaton xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ProjectFileName />
+  <GeneratorVersion>2.1</GeneratorVersion>
+  <ProjectName>sminesdb</ProjectName>
+  <LastGeneration>2016-12-27T12:46:13.3467157+03:00</LastGeneration>
+  <GenerationPath>C:\Users\Mbithi Kioko\Documents\CodeGenProjects\sminesdb</GenerationPath>
+  <CodeGenSettings>
+    <DefaultNamespace>sminesdb</DefaultNamespace>
+    <GenerateCustomizablePartial>false</GenerateCustomizablePartial>
+    <CodeGenPatternFile>%APP%\Patterns\DapperContext\DapperContext C# Pattern.dbpat</CodeGenPatternFile>
+    <SelectedPatterns>
+      <string>AppConfig</string>
+      <string>DapperAccess base</string>
+      <string>DALBase</string>
+      <string>Dapper Context</string>
+      <string>Entity DapperAccess Object</string>
+      <string>User Entity DapperAccess Object</string>
+      <string>Dapper Engine</string>
+      <string>Database Entity Objects</string>
+      <string>User Entity Objects</string>
+      <string>DbConnectionManager</string>
+      <string>ConnectionContainer</string>
+      <string>Dapper Model Query</string>
+      <string>VS2010 ClassProject</string>
+    </SelectedPatterns>
+    <GenerateColumnsDescription>true</GenerateColumnsDescription>
+    <GenerateTablesForeignKeys>true</GenerateTablesForeignKeys>
+    <GenerateConstraintKeys>true</GenerateConstraintKeys>
+  </CodeGenSettings>
+  <DbSettions>
+    <DatabaseProvider>SQLite</DatabaseProvider>
+    <DatabaseName>gameData</DatabaseName>
+    <ServerName>C:\Developer Area\SatoshiMinesBot\SatoshiMinesBot\gameData.sqlite</ServerName>
+    <UseSqlAuthentication>false</UseSqlAuthentication>
+    <SqlUsername />
+    <SqlPassword />
+    <ConnectTimeout>30</ConnectTimeout>
+    <LastFetch>2016-12-27T12:45:34.4372626+03:00</LastFetch>
+    <OracleUseSysdbaRole>false</OracleUseSysdbaRole>
+    <PrefixForTables />
+    <PrefixForViews>vw</PrefixForViews>
+    <SuffixForTables />
+    <SuffixForViews />
+    <IgnoredPrefixes>
+      <string>tbl_</string>
+      <string>tbl</string>
+      <string>vw_</string>
+      <string>vw</string>
+    </IgnoredPrefixes>
+    <IgnoredSuffixes>
+      <string>tbl</string>
+      <string>_tbl</string>
+      <string>_vw</string>
+      <string>vw</string>
+    </IgnoredSuffixes>
+    <Table Selected="true">cashout</Table>
+  </DbSettions>
+  <RenamingOptions>
+    <UnderlineWordDelimiter>false</UnderlineWordDelimiter>
+    <RemoveUnderline>
+      <Enabled>false</Enabled>
+      <Properties>true</Properties>
+      <Tables>true</Tables>
+    </RemoveUnderline>
+    <CaseChange>
+      <Enabled>true</Enabled>
+      <Properties>true</Properties>
+      <Tables>true</Tables>
+    </CaseChange>
+    <CaseChangeMode>PascalCase</CaseChangeMode>
+  </RenamingOptions>
+</ProjectDefinaton>
